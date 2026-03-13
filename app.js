@@ -1,222 +1,220 @@
-// ----------------------
-// Navigation et éléments
-// ----------------------
-const startBtn = document.getElementById("startBtn");
-const guitarBtn = document.getElementById("guitarBtn");
-const ukuleleBtn = document.getElementById("ukuleleBtn");
+let currentInstrument=null
 
-const welcome = document.getElementById("welcome");
-const menu = document.getElementById("menu");
-const tuner = document.getElementById("tuner");
+const popup=document.getElementById("popup")
+const instrumentMenu=document.getElementById("instrument-menu")
+const tunerBar=document.getElementById("tuner-bar")
+const cursor=document.getElementById("tuner-cursor")
+const noteDisplay=document.getElementById("note-display")
 
-const noteDisplay = document.getElementById("note");
-const freqDisplay = document.getElementById("frequency");
-const centsDisplay = document.getElementById("cents");
-const needle = document.getElementById("needle");
-const correctNotesDiv = document.getElementById("correctNotes");
+const guitarNotes=[
+{note:"E",freq:82.41},
+{note:"A",freq:110},
+{note:"D",freq:146.83},
+{note:"G",freq:196},
+{note:"B",freq:246.94},
+{note:"E",freq:329.63}
+]
 
-// ----------------------
-// Notes instruments
-// ----------------------
-const guitarNotes = [
-    { note: "E", freq: 82.41 },
-    { note: "A", freq: 110 },
-    { note: "D", freq: 146.83 },
-    { note: "G", freq: 196 },
-    { note: "B", freq: 246.94 },
-    { note: "E", freq: 329.63 }
-];
+const ukuleleNotes=[
+{note:"G",freq:196},
+{note:"C",freq:261.63},
+{note:"E",freq:329.63},
+{note:"A",freq:440}
+]
 
-const ukuleleNotes = [
-    { note: "G", freq: 196 },
-    { note: "C", freq: 261.63 },
-    { note: "E", freq: 329.63 },
-    { note: "A", freq: 440 }
-];
+function renderNotes(instrument){
 
-let activeNotes = guitarNotes; // Notes actives par défaut
-let correctNotesList = []; // Notes correctes stockées
-let currentPercent = 50; // Position de l’aiguille
-let audioContext, analyser, microphone, dataArray;
-let isTunerRunning = false;
+noteDisplay.innerHTML=""
 
-// ----------------------
-// Fonctions menu
-// ----------------------
-startBtn.onclick = () => {
-    welcome.style.display = "none";
-    menu.style.display = "block";
+let notes=instrument==="ukulele"?ukuleleNotes:guitarNotes
+
+notes.forEach(n=>{
+
+let el=document.createElement("span")
+
+el.className="note"
+
+el.textContent=n.note
+
+noteDisplay.appendChild(el)
+
+})
+
 }
 
-// Guitare
-guitarBtn.onclick = () => {
-    selectInstrument(guitarNotes);
+document.getElementById("btn-start").onclick=()=>{
+
+popup.style.display="none"
+
+instrumentMenu.style.display="block"
+
 }
 
-// Ukulélé
-ukuleleBtn.onclick = () => {
-    selectInstrument(ukuleleNotes);
+document.getElementById("btn-guitare").onclick=()=>{
+
+currentInstrument="guitare"
+
+tunerBar.style.display="block"
+
+renderNotes("guitare")
+
+startTuner()
+
 }
 
-// Sélection d’instrument
-function selectInstrument(notesArray) {
-    menu.style.display = "none";
-    tuner.style.display = "block";
+document.getElementById("btn-ukulele").onclick=()=>{
 
-    // 1. Changer notes actives
-    activeNotes = notesArray;
+currentInstrument="ukulele"
 
-    // 2. Reset notes correctes
-    resetCorrectNotes();
+tunerBar.style.display="block"
 
-    // 3. Stop tuner si déjà actif
-    stopTuner();
+renderNotes("ukulele")
 
-    // 4. Démarrer tuner
-    startTuner();
+startTuner()
+
 }
 
-// ----------------------
-// Reset notes correctes
-// ----------------------
-function resetCorrectNotes() {
-    correctNotesList = [];
-    correctNotesDiv.innerHTML = "";
+let audioContext
+let analyser
+let dataArray
+
+async function startTuner(){
+
+if(audioContext)return
+
+audioContext=new(window.AudioContext||window.webkitAudioContext)()
+
+const stream=await navigator.mediaDevices.getUserMedia({audio:true})
+
+const source=audioContext.createMediaStreamSource(stream)
+
+analyser=audioContext.createAnalyser()
+
+analyser.fftSize=2048
+
+source.connect(analyser)
+
+dataArray=new Float32Array(analyser.fftSize)
+
+update()
+
 }
 
-// ----------------------
-// Stop tuner
-// ----------------------
-function stopTuner() {
-    if (audioContext && isTunerRunning) {
-        audioContext.close();
-        isTunerRunning = false;
-    }
+function update(){
+
+analyser.getFloatTimeDomainData(dataArray)
+
+let freq=autoCorrelate(dataArray,audioContext.sampleRate)
+
+if(freq!==-1){
+
+let notes=currentInstrument==="ukulele"?ukuleleNotes:guitarNotes
+
+let closest=notes.reduce((a,b)=>{
+
+return Math.abs(b.freq-freq)<Math.abs(a.freq-freq)?b:a
+
+})
+
+let diff=freq-closest.freq
+
+let percent=Math.max(-1,Math.min(1,diff/closest.freq))
+
+cursor.style.left=(50+percent*50)+"%"
+
+if(Math.abs(percent)<0.02){
+
+cursor.style.background="#4CAF50"
+
 }
 
-// ----------------------
-// Démarrer tuner
-// ----------------------
-async function startTuner() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    analyser = audioContext.createAnalyser();
-    analyser.fftSize = 8192; // Détection notes graves améliorée
-    dataArray = new Float32Array(analyser.fftSize);
+else if(percent<0){
 
-    microphone = audioContext.createMediaStreamSource(stream);
-    microphone.connect(analyser);
+cursor.style.background="#2196F3"
 
-    isTunerRunning = true;
-    detectPitch();
 }
 
-// ----------------------
-// Détection pitch
-// ----------------------
-function detectPitch() {
-    analyser.getFloatTimeDomainData(dataArray);
-    let pitch = autoCorrelate(dataArray, audioContext.sampleRate);
+else{
 
-    if (pitch !== -1) {
-        freqDisplay.innerText = pitch.toFixed(2) + " Hz";
+cursor.style.background="#ff4444"
 
-        let closest = getClosestNote(pitch);
-        noteDisplay.innerText = closest.note;
-
-        let cents = 1200 * Math.log2(pitch / closest.freq);
-        centsDisplay.innerText = cents.toFixed(1) + " cents";
-
-        moveNeedle(cents);
-
-        if (Math.abs(cents) < 5) {
-            addCorrectNote(closest.note);
-        }
-    } else {
-        resetNeedle();
-        freqDisplay.innerText = "0 Hz";
-        noteDisplay.innerText = "--";
-        centsDisplay.innerText = "-- cents";
-    }
-
-    requestAnimationFrame(detectPitch);
 }
 
-// ----------------------
-// Ajouter note correcte
-// ----------------------
-function addCorrectNote(note) {
-    if (!correctNotesList.includes(note)) {
-        correctNotesList.push(note);
-        const span = document.createElement("span");
-        span.className = "correct";
-        span.innerText = note + " correct";
-        correctNotesDiv.appendChild(span);
-    }
+const noteEls=document.querySelectorAll(".note")
+
+noteEls.forEach(n=>{
+
+n.classList.remove("active")
+n.classList.remove("correct")
+
+if(n.textContent===closest.note){
+
+n.classList.add("active")
+
+if(Math.abs(percent)<0.02){
+
+n.classList.add("correct")
+
 }
 
-// ----------------------
-// Trouver note la plus proche
-// ----------------------
-function getClosestNote(freq) {
-    let closest = activeNotes[0];
-    for (let i = 1; i < activeNotes.length; i++) {
-        if (Math.abs(freq - activeNotes[i].freq) < Math.abs(freq - closest.freq)) {
-            closest = activeNotes[i];
-        }
-    }
-    return closest;
 }
 
-// ----------------------
-// Bouger aiguille fluide ±50 cents
-// ----------------------
-function moveNeedle(cents) {
-    let maxCents = 50;
-    if (cents > maxCents) cents = maxCents;
-    if (cents < -maxCents) cents = -maxCents;
+})
 
-    let targetPercent = 50 + (cents / maxCents) * 50;
-    currentPercent += (targetPercent - currentPercent) * 0.2; // fluidité
-    needle.style.left = currentPercent + "%";
-
-    needle.style.background = Math.abs(cents) < 5 ? "lime" : "red";
 }
 
-// ----------------------
-// Reset aiguille
-// ----------------------
-function resetNeedle() {
-    currentPercent += (50 - currentPercent) * 0.2;
-    needle.style.left = currentPercent + "%";
-    needle.style.background = "red";
+requestAnimationFrame(update)
+
 }
 
-// ----------------------
-// Autocorrélation pitch
-// ----------------------
-function autoCorrelate(buffer, sampleRate) {
-    let SIZE = buffer.length;
-    let rms = 0;
-    for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
-    rms = Math.sqrt(rms / SIZE);
+function autoCorrelate(buf,sampleRate){
 
-    if (rms < 0.005) return -1; // seuil plus bas pour graves
+let SIZE=buf.length
 
-    let r1 = 0, r2 = SIZE - 1;
-    for (let i = 0; i < SIZE / 2; i++) if (Math.abs(buffer[i]) < 0.2) { r1 = i; break; }
-    for (let i = 1; i < SIZE / 2; i++) if (Math.abs(buffer[SIZE - i]) < 0.2) { r2 = SIZE - i; break; }
+let rms=0
 
-    buffer = buffer.slice(r1, r2);
-    SIZE = buffer.length;
+for(let i=0;i<SIZE;i++){
 
-    let c = new Array(SIZE).fill(0);
-    for (let i = 0; i < SIZE; i++) for (let j = 0; j < SIZE - i; j++) c[i] += buffer[j] * buffer[j + i];
+rms+=buf[i]*buf[i]
 
-    let d = 0; while (c[d] > c[d + 1]) d++;
+}
 
-    let maxval = -1, maxpos = -1;
-    for (let i = d; i < SIZE; i++) if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+rms=Math.sqrt(rms/SIZE)
 
-    return sampleRate / maxpos;
+if(rms<0.01)return-1
+
+let r=new Array(SIZE).fill(0)
+
+for(let i=0;i<SIZE;i++){
+
+for(let j=0;j<SIZE-i;j++){
+
+r[i]+=buf[j]*buf[j+i]
+
+}
+
+}
+
+let d=0
+
+while(r[d]>r[d+1])d++
+
+let maxval=-1
+let maxpos=-1
+
+for(let i=d;i<SIZE;i++){
+
+if(r[i]>maxval){
+
+maxval=r[i]
+maxpos=i
+
+}
+
+}
+
+if(maxpos===-1)return-1
+
+return sampleRate/maxpos
+
 }
