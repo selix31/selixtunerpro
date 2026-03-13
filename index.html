@@ -1,141 +1,148 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Selix Tuner Pro</title>
+
+<title>Acadie Tuner</title>
 
 <style>
-body {
-    margin:0;
-    font-family:Arial;
-    background:#2e2e2e;
-    color:white;
-    text-align:center;
+
+body{
+font-family:sans-serif;
+background:#a9a9a9;
+margin:0;
+padding:0;
+text-align:center;
 }
 
-/* Bienvenue */
-#welcome {
-    margin-top:150px;
+/* POPUP */
+
+#popup{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.6);
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
-button {
-    padding:15px 40px;
-    font-size:22px;
-    border:none;
-    border-radius:10px;
-    background:#ff8f8f;
-    color:white;
-    cursor:pointer;
+#popup-content{
+background:#d77b7b;
+padding:20px;
+border-radius:10px;
 }
 
-/* Menu */
-#menu {
-    display:none;
-    margin-top:150px;
+#btn-start{
+background:#e7e0e0;
+border:none;
+padding:10px 20px;
+border-radius:5px;
+cursor:pointer;
 }
 
-/* Tuner */
-#tuner {
-    display:none;
-    margin-top:80px;
+/* MENU */
+
+#instrument-menu{
+display:none;
+margin:20px;
 }
 
-#note {
-    font-size:90px;
-    font-weight:bold;
+#instrument-menu button{
+margin:10px;
+padding:10px 20px;
+cursor:pointer;
+border-radius:5px;
 }
 
-#frequency {
-    font-size:24px;
-    margin-top:10px;
+/* TUNER */
+
+#tuner-bar{
+display:none;
+position:relative;
+margin:30px auto;
+background:#ebe6e6;
+height:25px;
+width:80%;
+border-radius:10px;
 }
 
-#cents {
-    font-size:20px;
-    margin-top:5px;
+#tuner-cursor{
+position:absolute;
+height:25px;
+width:12px;
+background:#ff6666;
+border-radius:5px;
+left:50%;
+transform:translateX(-50%);
+transition:left 0.08s;
 }
 
-/* Barre de tuner */
-#tunerBar {
-    width:80%;
-    height:30px;
-    background:#555;
-    margin:40px auto;
-    border-radius:20px;
-    position:relative;
+/* NOTES */
+
+#note-display{
+margin-top:25px;
 }
 
-#needle {
-    width:6px;
-    height:30px;
-    background:red;
-    position:absolute;
-    left:50%;
-    transform:translateX(-50%);
-    transition:left 0.05s linear, background 0.1s;
+.note{
+display:inline-block;
+padding:8px 12px;
+margin:5px;
+background:#fb8c8c;
+border-radius:5px;
+font-weight:bold;
+font-size:20px;
 }
 
-#labels {
-    width:80%;
-    margin:auto;
-    display:flex;
-    justify-content:space-between;
-    font-size:14px;
+.note.active{
+background:#ff6666;
+color:white;
 }
 
-/* Notes correctes */
-#correctNotes {
-    margin-top:30px;
-    font-size:20px;
-    min-height:30px;
+.note.correct{
+background:#4CAF50;
+color:white;
 }
-.correct {
-    color:lime;
-    margin-right:10px;
-    font-weight:bold;
-}
+
 </style>
 
 </head>
 
 <body>
 
-<!-- Bienvenue -->
-<div id="welcome">
-    <h1>Acadie Tuner Pro</h1>
-    <p>Application créée par Martin Duguay</p>
-    <button id="startBtn">Commencer</button>
+<div id="popup">
+<div id="popup-content">
+
+<h2>Bienvenue sur Acadie Tuner</h2>
+
+<p>Application créée par Martin Duguay</p>
+
+<button id="btn-start">Commencer</button>
+
+</div>
 </div>
 
-<!-- Menu -->
-<div id="menu">
-    <h2>Menu</h2>
-    <button id="guitarBtn">🎸 Guitare</button>
+<div id="instrument-menu">
+
+<button id="btn-guitare">Guitare acoustique</button>
+
+<button id="btn-ukulele">Ukulélé</button>
+
 </div>
 
-<!-- Tuner -->
-<div id="tuner">
-    <h2>Tuner</h2>
-    <div id="note">--</div>
-    <div id="frequency">0 Hz</div>
-    <div id="cents">-- cents</div>
+<div id="tuner-bar">
 
-    <div id="tunerBar">
-        <div id="needle"></div>
-    </div>
+<div id="tuner-cursor"></div>
 
-    <div id="labels">
-        <span>Grave</span>
-        <span>Parfait</span>
-        <span>Aigu</span>
-    </div>
-
-    <!-- Notes correctes -->
-    <div id="correctNotes"></div>
 </div>
+
+<div id="note-display"></div>
 
 <script src="app.js"></script>
+
 </body>
 </html>
